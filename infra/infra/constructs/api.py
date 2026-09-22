@@ -12,10 +12,15 @@ from infra.py_lambda import service_function
 
 # (method, path, lambda logical id in the `fns` dict below)
 ROUTES = [
+    ("GET", "/orgs/{org_id}", "AuthFn"),
     ("POST", "/orgs/{org_id}/invites", "AuthFn"),
     ("GET", "/me", "AuthFn"),
+    ("GET", "/users/{user_id}", "AuthFn"),
+    ("PUT", "/users/{user_id}", "AuthFn"),
     ("POST", "/orgs/{org_id}/teams", "TeamFn"),
     ("GET", "/orgs/{org_id}/teams", "TeamFn"),
+    ("GET", "/orgs/{org_id}/members", "TeamFn"),
+    ("DELETE", "/orgs/{org_id}/members/{user_id}", "TeamFn"),
     ("GET", "/teams/{team_id}", "TeamFn"),
     ("PUT", "/teams/{team_id}", "TeamFn"),
     ("DELETE", "/teams/{team_id}", "TeamFn"),
@@ -33,6 +38,10 @@ ROUTES = [
     ("POST", "/teams/{team_id}/documents/presign", "DocsFn"),
     ("GET", "/teams/{team_id}/documents", "DocsFn"),
     ("GET", "/teams/{team_id}/documents/{doc_id}/download", "DocsFn"),
+    ("POST", "/orgs/{org_id}/updates", "UpdatesFn"),
+    ("GET", "/orgs/{org_id}/updates", "UpdatesFn"),
+    ("GET", "/orgs/{org_id}/updates/{update_id}/download", "UpdatesFn"),
+    ("DELETE", "/orgs/{org_id}/updates/{update_id}", "UpdatesFn"),
 ]
 
 _HTTP_METHOD = {
@@ -67,7 +76,10 @@ class Api(Construct):
                 environment={**common_env, "USER_POOL_ID": user_pool.user_pool_id},
             ),
             "TeamFn": service_function(
-                self, "TeamFn", handler="team_service.handler.lambda_handler", environment=common_env
+                self,
+                "TeamFn",
+                handler="team_service.handler.lambda_handler",
+                environment={**common_env, "USER_POOL_ID": user_pool.user_pool_id},
             ),
             "ScheduleFn": service_function(
                 self, "ScheduleFn", handler="schedule_service.handler.lambda_handler", environment=common_env
@@ -82,17 +94,31 @@ class Api(Construct):
                 environment={**common_env, "DOCS_BUCKET": bucket.bucket_name},
                 timeout=Duration.seconds(15),
             ),
+            "UpdatesFn": service_function(
+                self,
+                "UpdatesFn",
+                handler="updates_service.handler.lambda_handler",
+                environment={**common_env, "DOCS_BUCKET": bucket.bucket_name},
+                timeout=Duration.seconds(15),
+            ),
         }
 
         for fn in fns.values():
             table.grant_read_write_data(fn)
         bucket.grant_read_write(fns["DocsFn"])
+        bucket.grant_read_write(fns["UpdatesFn"])
         fns["AuthFn"].add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
                     "cognito-idp:AdminCreateUser",
                     "cognito-idp:AdminGetUser",
                 ],
+                resources=[user_pool.user_pool_arn],
+            )
+        )
+        fns["TeamFn"].add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["cognito-idp:AdminDeleteUser"],
                 resources=[user_pool.user_pool_arn],
             )
         )

@@ -65,6 +65,32 @@ export function useInviteUser(orgId: string | undefined) {
       if (variables.teamId) {
         queryClient.invalidateQueries({ queryKey: ["teamMembers", variables.teamId] });
       }
+      queryClient.invalidateQueries({ queryKey: ["orgMembers", orgId] });
     },
+  });
+}
+
+export interface OrgMember {
+  userId: string;
+  name: string;
+  email: string;
+  orgRole: "OWNER" | "MANAGER" | "MEMBER";
+  status: string;
+  teams: { teamId: string; role: string }[];
+}
+
+export function useOrgMembers(orgId: string | undefined) {
+  return useQuery({
+    queryKey: ["orgMembers", orgId],
+    queryFn: () => api.get<OrgMember[]>(`/orgs/${orgId}/members`),
+    enabled: !!orgId,
+  });
+}
+
+export function useRemoveOrgMember(orgId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => api.delete(`/orgs/${orgId}/members/${userId}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["orgMembers", orgId] }),
   });
 }

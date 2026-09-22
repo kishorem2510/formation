@@ -99,6 +99,21 @@ export const inviteSchema = z
   });
 export type InviteInput = z.infer<typeof inviteSchema>;
 
+export const profileSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  dob: z.string().optional(),
+  height: z.string().optional(),
+  weight: z.string().optional(),
+  jerseySize: z.string().optional(),
+});
+export type ProfileInput = z.infer<typeof profileSchema>;
+
+export const updateSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  body: z.string().min(1, "Message is required"),
+});
+export type UpdateInput = z.infer<typeof updateSchema>;
+
 export const createEventSchema = z.object({
   eventType: z.enum(["GAME", "PRACTICE"]),
   startTime: z.string().min(1, "Start time is required"),

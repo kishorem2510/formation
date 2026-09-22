@@ -6,7 +6,14 @@ from aws_lambda_powertools.event_handler import APIGatewayHttpResolver
 from aws_lambda_powertools.event_handler.exceptions import BadRequestError
 from boto3.dynamodb.conditions import Key
 
-from common.authz import Forbidden, get_claims, require_org_admin, require_same_org
+from common.authz import (
+    Forbidden,
+    get_claims,
+    require_can_edit_user,
+    require_can_view_user,
+    require_org_admin,
+    require_same_org,
+)
 from common.db import table, org_pk, team_pk, user_sk
 from common.password import validate_password
 from common.responses import error
@@ -16,6 +23,10 @@ _cognito = boto3.client("cognito-idp")
 
 ORG_WIDE_ROLES = {"MANAGER"}
 TEAM_SCOPED_ROLES = {"COACH", "PLAYER", "PHYSIO"}
+
+# Athlete profile fields -- free-text so users pick their own units/format
+# (e.g. "5'10\"" or "178 cm"), editable by the user themselves or an org admin.
+PROFILE_FIELDS = ("dob", "height", "weight", "jerseySize")
 
 
 @app.exception_handler(Forbidden)
@@ -120,6 +131,32 @@ def invite_user(org_id: str):
     return response
 
 
+def _serialize_profile(profile: dict, teams: list[dict]) -> dict:
+    out = {
+        "userId": profile["userId"],
+        "orgId": profile["orgId"],
+        "email": profile["email"],
+        "name": profile["name"],
+        "orgRole": profile["orgRole"],
+        "status": profile.get("status", "ACTIVE"),
+        "teams": [{"teamId": tm["teamId"], "role": tm["role"]} for tm in teams],
+    }
+    for field in PROFILE_FIELDS:
+        out[field] = profile.get(field)
+    return out
+
+
+@app.get("/orgs/<org_id>")
+def get_org(org_id: str):
+    claims = get_claims(app.current_event.raw_event)
+    require_same_org(claims, org_id)
+
+    item = table().get_item(Key={"PK": org_pk(org_id), "SK": org_pk(org_id)}).get("Item")
+    if not item:
+        return error("organization not found", status=404)
+    return {"orgId": item["orgId"], "name": item["name"], "createdAt": item["createdAt"]}
+
+
 @app.get("/me")
 def me():
     claims = get_claims(app.current_event.raw_event)
@@ -133,16 +170,49 @@ def me():
     teams = [i for i in items if i["type"] == "MEMBERSHIP"]
     if not profile:
         return error("user profile not found", status=404)
-    return {
-        "userId": claims.user_id,
-        "orgId": profile["orgId"],
-        "email": profile["email"],
-        "name": profile["name"],
-        "orgRole": profile["orgRole"],
-        "teams": [
-            {"teamId": tm["teamId"], "role": tm["role"]} for tm in teams
-        ],
-    }
+    return _serialize_profile(profile, teams)
+
+
+@app.get("/users/<user_id>")
+def get_user(user_id: str):
+    claims = get_claims(app.current_event.raw_event)
+    require_can_view_user(claims, user_id)
+
+    t = table()
+    profile = t.get_item(Key={"PK": org_pk(claims.org_id), "SK": user_sk(user_id)}).get("Item")
+    if not profile:
+        return error("user not found", status=404)
+
+    teams_resp = t.query(
+        IndexName="GSI1",
+        KeyConditionExpression=Key("GSI1PK").eq(f"USER#{user_id}"),
+    )
+    teams = [i for i in teams_resp.get("Items", []) if i["type"] == "MEMBERSHIP"]
+    return _serialize_profile(profile, teams)
+
+
+@app.put("/users/<user_id>")
+def update_user(user_id: str):
+    claims = get_claims(app.current_event.raw_event)
+    require_can_edit_user(claims, user_id)
+
+    body = app.current_event.json_body
+    updates = {k: v for k, v in body.items() if k in {"name", *PROFILE_FIELDS}}
+    if not updates:
+        raise BadRequestError("nothing to update")
+
+    t = table()
+    key = {"PK": org_pk(claims.org_id), "SK": user_sk(user_id)}
+    if not t.get_item(Key=key).get("Item"):
+        return error("user not found", status=404)
+
+    t.update_item(
+        Key=key,
+        UpdateExpression="SET " + ", ".join(f"#{k} = :{k}" for k in updates),
+        ExpressionAttributeNames={f"#{k}": k for k in updates},
+        ExpressionAttributeValues={f":{k}": v for k, v in updates.items()},
+    )
+    return {"userId": user_id, **updates}
 
 
 def lambda_handler(event, context):

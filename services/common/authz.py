@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from boto3.dynamodb.conditions import Key
+
 from common.db import table, team_pk, user_sk
 
 
@@ -54,3 +56,27 @@ def require_team_role(claims: Claims, team_id: str, allowed_roles: set[str]) -> 
         raise Forbidden("not a member of this team")
     if membership["role"] not in allowed_roles:
         raise Forbidden(f"requires one of {allowed_roles} on this team")
+
+
+def user_team_ids(user_id: str) -> set[str]:
+    resp = table().query(
+        IndexName="GSI1",
+        KeyConditionExpression=Key("GSI1PK").eq(f"USER#{user_id}"),
+    )
+    return {i["teamId"] for i in resp.get("Items", []) if i["type"] == "MEMBERSHIP"}
+
+
+def require_can_view_user(claims: Claims, target_user_id: str) -> None:
+    """Org admins see everyone. Anyone can see their own profile. Otherwise
+    the viewer and the target must share at least one team."""
+    if claims.is_org_admin or claims.user_id == target_user_id:
+        return
+    if user_team_ids(claims.user_id) & user_team_ids(target_user_id):
+        return
+    raise Forbidden("not authorized to view this profile")
+
+
+def require_can_edit_user(claims: Claims, target_user_id: str) -> None:
+    if claims.is_org_admin or claims.user_id == target_user_id:
+        return
+    raise Forbidden("not authorized to edit this profile")

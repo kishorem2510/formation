@@ -19,11 +19,15 @@ export function InviteForm({
   orgId,
   allowedRoles,
   fixedTeamId,
+  teamOptions,
   onDone,
 }: {
   orgId: string;
   allowedRoles: readonly string[];
   fixedTeamId?: string;
+  /** When provided, the team field renders as a dropdown instead of a
+   * free-text id field. Ignored when fixedTeamId is set. */
+  teamOptions?: { teamId: string; name: string }[];
   onDone?: () => void;
 }) {
   const invite = useInviteUser(orgId);
@@ -119,8 +123,21 @@ export function InviteForm({
       </Field>
 
       {!fixedTeamId && role && role !== "MANAGER" && (
-        <Field label="Team ID" error={errors.teamId?.message}>
-          <Input {...register("teamId")} placeholder="Paste the team's id" />
+        <Field label="Team" error={errors.teamId?.message}>
+          {teamOptions ? (
+            <Select {...register("teamId")} defaultValue="">
+              <option value="" disabled>
+                Select a team
+              </option>
+              {teamOptions.map((t) => (
+                <option key={t.teamId} value={t.teamId}>
+                  {t.name}
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <Input {...register("teamId")} placeholder="Paste the team's id" />
+          )}
         </Field>
       )}
 

@@ -1,15 +1,25 @@
+import os
 import uuid
 from datetime import datetime, timezone
 
+import boto3
 from aws_lambda_powertools.event_handler import APIGatewayHttpResolver
 from aws_lambda_powertools.event_handler.exceptions import BadRequestError, NotFoundError
 from boto3.dynamodb.conditions import Key
 
-from common.authz import Forbidden, get_claims, require_org_admin, require_same_org, require_team_role
+from common.authz import (
+    Forbidden,
+    get_claims,
+    require_org_admin,
+    require_same_org,
+    require_team_role,
+    user_team_ids,
+)
 from common.db import table, org_pk, team_pk, user_sk
 from common.responses import error
 
 app = APIGatewayHttpResolver()
+_cognito = boto3.client("cognito-idp")
 
 ALL_TEAM_ROLES = {"COACH", "PLAYER", "PHYSIO"}
 
@@ -143,6 +153,81 @@ def remove_member(team_id: str, user_id: str):
     claims = get_claims(app.current_event.raw_event)
     require_org_admin(claims)
     table().delete_item(Key={"PK": team_pk(team_id), "SK": user_sk(user_id)})
+    return {"removed": user_id}
+
+
+@app.get("/orgs/<org_id>/members")
+def list_org_members(org_id: str):
+    """Flat, org-wide roster for the Team Management page. Org admins see
+    everyone; everyone else sees only people they share a team with."""
+    claims = get_claims(app.current_event.raw_event)
+    require_same_org(claims, org_id)
+
+    t = table()
+    users_resp = t.query(
+        KeyConditionExpression=Key("PK").eq(org_pk(org_id)) & Key("SK").begins_with("USER#")
+    )
+    users_by_id = {u["userId"]: {**u, "teams": []} for u in users_resp.get("Items", [])}
+
+    teams_resp = t.query(
+        KeyConditionExpression=Key("PK").eq(org_pk(org_id)) & Key("SK").begins_with("TEAM#")
+    )
+    team_ids = [tm["teamId"] for tm in teams_resp.get("Items", [])]
+
+    if not claims.is_org_admin:
+        visible_team_ids = user_team_ids(claims.user_id)
+        team_ids = [tid for tid in team_ids if tid in visible_team_ids]
+
+    for team_id in team_ids:
+        members_resp = t.query(
+            KeyConditionExpression=Key("PK").eq(team_pk(team_id)) & Key("SK").begins_with("USER#")
+        )
+        for m in members_resp.get("Items", []):
+            entry = users_by_id.get(m["userId"])
+            if entry:
+                entry["teams"].append({"teamId": team_id, "role": m["role"]})
+
+    if claims.is_org_admin:
+        result = list(users_by_id.values())
+    else:
+        # Staff only ever see people on a team they're also on -- this
+        # naturally excludes Owner/Manager, who hold no team memberships.
+        result = [u for u in users_by_id.values() if u["teams"]]
+
+    return [
+        {
+            "userId": u["userId"],
+            "name": u["name"],
+            "email": u["email"],
+            "orgRole": u["orgRole"],
+            "status": u.get("status", "ACTIVE"),
+            "teams": u["teams"],
+        }
+        for u in result
+    ]
+
+
+@app.delete("/orgs/<org_id>/members/<user_id>")
+def remove_org_member(org_id: str, user_id: str):
+    claims = get_claims(app.current_event.raw_event)
+    require_same_org(claims, org_id)
+    require_org_admin(claims)
+
+    if user_id == claims.user_id:
+        raise BadRequestError("cannot remove yourself")
+
+    t = table()
+    target = t.get_item(Key={"PK": org_pk(org_id), "SK": user_sk(user_id)}).get("Item")
+    if not target:
+        raise NotFoundError("member not found")
+    if target.get("orgRole") == "OWNER":
+        raise Forbidden("the Owner cannot be removed")
+
+    for team_id in user_team_ids(user_id):
+        t.delete_item(Key={"PK": team_pk(team_id), "SK": user_sk(user_id)})
+    t.delete_item(Key={"PK": org_pk(org_id), "SK": user_sk(user_id)})
+
+    _cognito.admin_delete_user(UserPoolId=os.environ["USER_POOL_ID"], Username=target["email"])
     return {"removed": user_id}
 
 

@@ -40,5 +40,9 @@ def doc_sk(doc_id: str) -> str:
     return f"DOC#{doc_id}"
 
 
+def update_sk(date_iso: str, update_id: str) -> str:
+    return f"UPDATE#{date_iso}#{update_id}"
+
+
 def gsi1pk_user(user_id: str) -> str:
     return f"USER#{user_id}"
