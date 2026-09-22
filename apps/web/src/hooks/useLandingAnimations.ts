@@ -40,6 +40,37 @@ export function useHeroEntrance(ref: RefObject<HTMLElement | null>) {
   }, [ref]);
 }
 
+/** Same entrance + float pattern as the landing hero, reused for the
+ * auth pages' brand panel ([data-panel] text, .panel-card floating chips). */
+export function usePanelEntrance(ref: RefObject<HTMLElement | null>) {
+  useLayoutEffect(() => {
+    if (!ref.current || prefersReducedMotion()) return;
+
+    const ctx = gsap.context(() => {
+      gsap.set("[data-panel]", { opacity: 0, y: 16 });
+      gsap.to("[data-panel]", {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        stagger: 0.08,
+        ease: "power2.out",
+      });
+
+      gsap.to(".panel-card", {
+        y: -6,
+        duration: 2.6,
+        ease: "sine.inOut",
+        yoyo: true,
+        repeat: -1,
+        stagger: 0.35,
+        delay: 0.5,
+      });
+    }, ref);
+
+    return () => ctx.revert();
+  }, [ref]);
+}
+
 /** Scroll-triggered reveal for elements marked [data-reveal] within a
  * section. ScrollTrigger is dynamically imported so it never ships in the
  * initial bundle for routes that don't use it. */

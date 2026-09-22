@@ -8,9 +8,10 @@ from infra.infra_stack import InfraStack
 app = cdk.App()
 
 # Same-app landing + dashboard, so this is the one origin the API needs to
-# trust. Add the deployed CloudFront/Amplify domain once it exists.
+# trust per environment.
 web_origins = [
     "http://localhost:3000",
+    "https://formation-mu-roan.vercel.app",
 ]
 
 InfraStack(

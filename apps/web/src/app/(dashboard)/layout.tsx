@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMe, isOrgAdmin } from "@/hooks/useMe";
 import { useAppStore } from "@/store/useAppStore";
 import { Button } from "@/components/ui";
+import { Logo } from "@/components/Logo";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -31,8 +32,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <Link href="/dashboard" className="text-lg font-semibold">
-            Formation
+          <Link href="/dashboard">
+            <Logo iconClassName="h-7 w-7" />
           </Link>
           <nav className="flex items-center gap-5 text-sm">
             <Link href="/dashboard" className="text-muted hover:text-foreground">

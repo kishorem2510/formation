@@ -7,7 +7,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn, confirmSignIn } from "aws-amplify/auth";
 import { configureAmplify } from "@/lib/amplify";
 import { loginSchema, type LoginInput } from "@/lib/schemas";
-import { Button, Card, Field, Input } from "@/components/ui";
+import { Button, Field, Input } from "@/components/ui";
+import { AuthSplitLayout } from "@/components/AuthSplitLayout";
+
+const PANEL_PROPS = {
+  eyebrow: "Welcome back",
+  headline: "Run your season from your pocket.",
+  body: "Sign in to check today's schedule, mark attendance, or see who's on the roster.",
+};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -50,53 +57,49 @@ export default function LoginPage() {
 
   if (needsNewPassword) {
     return (
-      <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-12">
-        <Card>
-          <h1 className="mb-1 text-2xl font-semibold">Set your password</h1>
-          <p className="mb-6 text-sm text-muted">
-            First sign-in &mdash; choose a permanent password.
-          </p>
-          <div className="space-y-4">
-            <Field label="New password">
-              <Input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-            </Field>
-            {submitError && <p className="text-sm text-danger">{submitError}</p>}
-            <Button onClick={onSetNewPassword} className="w-full">
-              Set password &amp; continue
-            </Button>
-          </div>
-        </Card>
-      </div>
+      <AuthSplitLayout {...PANEL_PROPS}>
+        <h1 className="mb-1 text-2xl font-semibold">Set your password</h1>
+        <p className="mb-6 text-sm text-muted">
+          First sign-in &mdash; choose a permanent password.
+        </p>
+        <div className="space-y-4">
+          <Field label="New password">
+            <Input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+          </Field>
+          {submitError && <p className="text-sm text-danger">{submitError}</p>}
+          <Button onClick={onSetNewPassword} className="w-full">
+            Set password &amp; continue
+          </Button>
+        </div>
+      </AuthSplitLayout>
     );
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-12">
-      <Card>
-        <h1 className="mb-1 text-2xl font-semibold">Sign in</h1>
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
-          <Field label="Email" error={errors.email?.message}>
-            <Input type="email" {...register("email")} />
-          </Field>
-          <Field label="Password" error={errors.password?.message}>
-            <Input type="password" {...register("password")} />
-          </Field>
-          {submitError && <p className="text-sm text-danger">{submitError}</p>}
-          <Button type="submit" disabled={isSubmitting} className="w-full">
-            {isSubmitting ? "Signing in..." : "Sign in"}
-          </Button>
-        </form>
-        <p className="mt-6 text-center text-sm text-muted">
-          New organization?{" "}
-          <a href="/signup" className="text-accent hover:underline">
-            Create one
-          </a>
-        </p>
-      </Card>
-    </div>
+    <AuthSplitLayout {...PANEL_PROPS}>
+      <h1 className="mb-1 text-2xl font-semibold">Sign in</h1>
+      <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
+        <Field label="Email" error={errors.email?.message}>
+          <Input type="email" {...register("email")} />
+        </Field>
+        <Field label="Password" error={errors.password?.message}>
+          <Input type="password" {...register("password")} />
+        </Field>
+        {submitError && <p className="text-sm text-danger">{submitError}</p>}
+        <Button type="submit" disabled={isSubmitting} className="w-full">
+          {isSubmitting ? "Signing in..." : "Sign in"}
+        </Button>
+      </form>
+      <p className="mt-6 text-center text-sm text-muted">
+        New organization?{" "}
+        <a href="/signup" className="text-accent hover:underline">
+          Create one
+        </a>
+      </p>
+    </AuthSplitLayout>
   );
 }
