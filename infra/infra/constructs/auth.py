@@ -46,9 +46,12 @@ class AuthStack(Construct):
                 "orgId": cognito.StringAttribute(mutable=True),
                 "orgTier": cognito.StringAttribute(mutable=True),
             },
+            # Mirrors apps/web/src/lib/schemas.ts passwordSchema -- keep the
+            # two in sync so the client-side checklist never promises
+            # something Cognito then rejects.
             password_policy=cognito.PasswordPolicy(
-                min_length=10,
-                require_lowercase=True,
+                min_length=8,
+                require_lowercase=False,
                 require_uppercase=True,
                 require_digits=True,
                 require_symbols=False,

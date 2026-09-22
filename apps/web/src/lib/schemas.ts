@@ -1,12 +1,37 @@
 import { z } from "zod";
 
-export const signupSchema = z.object({
-  orgName: z.string().min(2, "Organization name is required"),
-  name: z.string().min(1, "Your name is required"),
-  email: z.string().email(),
-  password: z.string().min(10, "At least 10 characters"),
-});
+// Mirrors the Cognito user pool password policy (infra/infra/constructs/auth.py) --
+// keep these in sync so client-side validation never accepts something Cognito rejects.
+export const passwordSchema = z
+  .string()
+  .min(8, "At least 8 characters")
+  .regex(/[A-Z]/, "At least one uppercase letter")
+  .regex(/[0-9]/, "At least one number");
+
+export const signupSchema = z
+  .object({
+    orgName: z.string().min(2, "Organization name is required"),
+    name: z.string().min(1, "Your name is required"),
+    email: z.string().email(),
+    password: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
 export type SignupInput = z.infer<typeof signupSchema>;
+
+export const newPasswordSchema = z
+  .object({
+    password: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+export type NewPasswordInput = z.infer<typeof newPasswordSchema>;
 
 export const loginSchema = z.object({
   email: z.string().email(),

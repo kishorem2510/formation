@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signUp } from "aws-amplify/auth";
 import { configureAmplify } from "@/lib/amplify";
 import { signupSchema, type SignupInput } from "@/lib/schemas";
 import { Button, Field, Input } from "@/components/ui";
+import { PasswordInput, PasswordRequirements } from "@/components/PasswordField";
 import { AuthSplitLayout } from "@/components/AuthSplitLayout";
 
 export default function SignupPage() {
@@ -16,8 +17,11 @@ export default function SignupPage() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<SignupInput>({ resolver: zodResolver(signupSchema) });
+  const password = useWatch({ control, name: "password" }) ?? "";
+  const confirmPassword = useWatch({ control, name: "confirmPassword" }) ?? "";
 
   async function onSubmit(data: SignupInput) {
     setSubmitError(null);
@@ -62,8 +66,12 @@ export default function SignupPage() {
           <Input type="email" {...register("email")} placeholder="you@club.com" />
         </Field>
         <Field label="Password" error={errors.password?.message}>
-          <Input type="password" {...register("password")} />
+          <PasswordInput {...register("password")} />
         </Field>
+        <Field label="Confirm password" error={errors.confirmPassword?.message}>
+          <PasswordInput {...register("confirmPassword")} />
+        </Field>
+        <PasswordRequirements password={password} confirmPassword={confirmPassword} />
         {submitError && <p className="text-sm text-danger">{submitError}</p>}
         <Button type="submit" disabled={isSubmitting} className="w-full">
           {isSubmitting ? "Creating..." : "Create organization"}

@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn, confirmSignIn } from "aws-amplify/auth";
 import { configureAmplify } from "@/lib/amplify";
-import { loginSchema, type LoginInput } from "@/lib/schemas";
+import { loginSchema, type LoginInput, newPasswordSchema, type NewPasswordInput } from "@/lib/schemas";
 import { Button, Field, Input } from "@/components/ui";
+import { PasswordInput, PasswordRequirements } from "@/components/PasswordField";
 import { AuthSplitLayout } from "@/components/AuthSplitLayout";
 
 const PANEL_PROPS = {
@@ -16,13 +17,55 @@ const PANEL_PROPS = {
   body: "Sign in to check today's schedule, mark attendance, or see who's on the roster.",
 };
 
+function NewPasswordStep({ onSubmit }: { onSubmit: (password: string) => Promise<void> }) {
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors, isSubmitting },
+  } = useForm<NewPasswordInput>({ resolver: zodResolver(newPasswordSchema) });
+  const password = useWatch({ control, name: "password" }) ?? "";
+  const confirmPassword = useWatch({ control, name: "confirmPassword" }) ?? "";
+
+  async function submit(data: NewPasswordInput) {
+    setSubmitError(null);
+    try {
+      await onSubmit(data.password);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Could not set password");
+    }
+  }
+
+  return (
+    <AuthSplitLayout {...PANEL_PROPS}>
+      <h1 className="mb-1 text-2xl font-semibold">Set your password</h1>
+      <p className="mb-6 text-sm text-muted">
+        First sign-in &mdash; choose a permanent password.
+      </p>
+      <form onSubmit={handleSubmit(submit)} className="space-y-4">
+        <Field label="New password" error={errors.password?.message}>
+          <PasswordInput {...register("password")} />
+        </Field>
+        <Field label="Confirm password" error={errors.confirmPassword?.message}>
+          <PasswordInput {...register("confirmPassword")} />
+        </Field>
+        <PasswordRequirements password={password} confirmPassword={confirmPassword} />
+        {submitError && <p className="text-sm text-danger">{submitError}</p>}
+        <Button type="submit" disabled={isSubmitting} className="w-full">
+          {isSubmitting ? "Setting password..." : "Set password & continue"}
+        </Button>
+      </form>
+    </AuthSplitLayout>
+  );
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
   // Invited users (Coach/Player/Physio/Manager) are created via
   // AdminCreateUser and must set a permanent password on first sign-in.
   const [needsNewPassword, setNeedsNewPassword] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
 
   const {
     register,
@@ -45,38 +88,13 @@ export default function LoginPage() {
     }
   }
 
-  async function onSetNewPassword() {
-    setSubmitError(null);
-    try {
-      await confirmSignIn({ challengeResponse: newPassword });
-      router.push("/dashboard");
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Could not set password");
-    }
+  async function onSetNewPassword(newPassword: string) {
+    await confirmSignIn({ challengeResponse: newPassword });
+    router.push("/dashboard");
   }
 
   if (needsNewPassword) {
-    return (
-      <AuthSplitLayout {...PANEL_PROPS}>
-        <h1 className="mb-1 text-2xl font-semibold">Set your password</h1>
-        <p className="mb-6 text-sm text-muted">
-          First sign-in &mdash; choose a permanent password.
-        </p>
-        <div className="space-y-4">
-          <Field label="New password">
-            <Input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
-          </Field>
-          {submitError && <p className="text-sm text-danger">{submitError}</p>}
-          <Button onClick={onSetNewPassword} className="w-full">
-            Set password &amp; continue
-          </Button>
-        </div>
-      </AuthSplitLayout>
-    );
+    return <NewPasswordStep onSubmit={onSetNewPassword} />;
   }
 
   return (
@@ -87,7 +105,7 @@ export default function LoginPage() {
           <Input type="email" {...register("email")} />
         </Field>
         <Field label="Password" error={errors.password?.message}>
-          <Input type="password" {...register("password")} />
+          <PasswordInput {...register("password")} />
         </Field>
         {submitError && <p className="text-sm text-danger">{submitError}</p>}
         <Button type="submit" disabled={isSubmitting} className="w-full">

@@ -58,3 +58,30 @@ export function IconCross({ className = "h-4 w-4" }: IconProps) {
     </svg>
   );
 }
+
+export function IconEye({ className = "h-4.5 w-4.5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className={className}>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="2.75" />
+    </svg>
+  );
+}
+
+export function IconEyeOff({ className = "h-4.5 w-4.5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className={className}>
+      <path d="M3 3l18 18" strokeLinecap="round" />
+      <path d="M10.6 5.64A10.8 10.8 0 0112 5.5c6 0 9.5 6.5 9.5 6.5a15.6 15.6 0 01-3.2 4.02M6.5 7.24C4.3 8.9 2.5 12 2.5 12s3.5 6.5 9.5 6.5a9.9 9.9 0 004.02-.86" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9.9 10.1a2.75 2.75 0 003.9 3.9" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function IconCircle({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className={className}>
+      <circle cx="12" cy="12" r="8.5" />
+    </svg>
+  );
+}
