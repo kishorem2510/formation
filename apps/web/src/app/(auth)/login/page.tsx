@@ -84,6 +84,13 @@ export default function LoginPage() {
       }
       router.push("/dashboard");
     } catch (err) {
+      // A stale Cognito session was still active in this browser -- the
+      // AuthLayout redirect should normally prevent reaching this page at
+      // all, but if we still land here mid-race, treat it as success.
+      if (err instanceof Error && /already a signed in user/i.test(err.message)) {
+        router.push("/dashboard");
+        return;
+      }
       setSubmitError(err instanceof Error ? err.message : "Sign in failed");
     }
   }
