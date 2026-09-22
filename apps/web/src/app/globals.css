@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+/* Dark-first theme. Light mode is an explicit opt-in via [data-theme="light"]
+   (toggled client-side, see src/store/useAppStore.ts) -- not just an OS
+   preference follow, per product decision. */
+:root {
+  --background: #0b0f14;
+  --surface: #131a22;
+  --surface-hover: #1a2330;
+  --border: #232d3a;
+  --foreground: #f5f7fa;
+  --muted: #8b95a1;
+  --accent: #22c55e;
+  --accent-hover: #16a34a;
+  --accent-foreground: #06120a;
+  --danger: #ef4444;
+}
+
+:root[data-theme="light"] {
+  --background: #ffffff;
+  --surface: #f5f7fa;
+  --surface-hover: #eceff2;
+  --border: #e2e6ea;
+  --foreground: #0b0f14;
+  --muted: #5b6572;
+  --accent: #16a34a;
+  --accent-hover: #15803d;
+  --accent-foreground: #ffffff;
+  --danger: #dc2626;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

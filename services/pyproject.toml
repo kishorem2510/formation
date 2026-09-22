@@ -1,0 +1,19 @@
+[project]
+name = "formation-services"
+version = "0.1.0"
+description = "Lambda handler business logic for the Formation sports team management platform"
+requires-python = ">=3.13"
+dependencies = [
+    "boto3",
+    "aws-lambda-powertools",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "moto",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
