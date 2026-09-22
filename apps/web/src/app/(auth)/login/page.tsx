@@ -104,9 +104,14 @@ export default function LoginPage() {
         <Field label="Email" error={errors.email?.message}>
           <Input type="email" {...register("email")} />
         </Field>
-        <Field label="Password" error={errors.password?.message}>
-          <PasswordInput {...register("password")} />
-        </Field>
+        <div>
+          <Field label="Password" error={errors.password?.message}>
+            <PasswordInput {...register("password")} />
+          </Field>
+          <a href="/forgot-password" className="mt-1.5 block text-right text-sm text-accent hover:underline">
+            Forgot password?
+          </a>
+        </div>
         {submitError && <p className="text-sm text-danger">{submitError}</p>}
         <Button type="submit" disabled={isSubmitting} className="w-full">
           {isSubmitting ? "Signing in..." : "Sign in"}

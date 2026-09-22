@@ -6,21 +6,19 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/hooks/useAuth";
 import { useMe, isOrgAdmin, roleOnTeam } from "@/hooks/useMe";
-import { useTeam, useTeamMembers, useInviteUser } from "@/hooks/useTeams";
+import { useTeam, useTeamMembers } from "@/hooks/useTeams";
 import { useTeamEvents, useCreateEvent } from "@/hooks/useSchedule";
 import { useEventAttendance, useMarkAttendance, AttendanceStatus } from "@/hooks/useAttendance";
 import { useTeamDocuments, useUploadDocument, useDownloadDocument } from "@/hooks/useDocuments";
-import { createEventSchema, CreateEventInput, inviteSchema, InviteInput } from "@/lib/schemas";
+import { createEventSchema, CreateEventInput } from "@/lib/schemas";
 import { Button, Card, Field, Input, Select } from "@/components/ui";
+import { InviteForm } from "@/components/InviteForm";
+
+const TEAM_INVITE_ROLES = ["COACH", "PLAYER", "PHYSIO"] as const;
 
 function RosterSection({ teamId, canManage }: { teamId: string; canManage: boolean }) {
   const { data: members } = useTeamMembers(teamId);
   const { data: me } = useMe(true);
-  const invite = useInviteUser(me?.orgId);
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<InviteInput>({
-    resolver: zodResolver(inviteSchema),
-    defaultValues: { teamId },
-  });
 
   return (
     <Card>
@@ -35,35 +33,10 @@ function RosterSection({ teamId, canManage }: { teamId: string; canManage: boole
         {members?.length === 0 && <p className="text-sm text-muted">No members yet.</p>}
       </ul>
 
-      {canManage && (
-        <form
-          onSubmit={handleSubmit((data) =>
-            invite.mutate({ ...data, teamId }, { onSuccess: () => reset({ teamId }) }),
-          )}
-          className="space-y-3 border-t border-border pt-4"
-        >
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Name" error={errors.name?.message}>
-              <Input {...register("name")} />
-            </Field>
-            <Field label="Email" error={errors.email?.message}>
-              <Input type="email" {...register("email")} />
-            </Field>
-          </div>
-          <Field label="Role" error={errors.role?.message}>
-            <Select {...register("role")} defaultValue="">
-              <option value="" disabled>
-                Select a role
-              </option>
-              <option value="COACH">Coach</option>
-              <option value="PLAYER">Player</option>
-              <option value="PHYSIO">Physio</option>
-            </Select>
-          </Field>
-          <Button type="submit" disabled={invite.isPending}>
-            {invite.isPending ? "Inviting..." : "Add to roster"}
-          </Button>
-        </form>
+      {canManage && me?.orgId && (
+        <div className="border-t border-border pt-4">
+          <InviteForm orgId={me.orgId} allowedRoles={TEAM_INVITE_ROLES} fixedTeamId={teamId} />
+        </div>
       )}
     </Card>
   );

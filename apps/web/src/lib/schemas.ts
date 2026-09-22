@@ -45,6 +45,24 @@ export const confirmSchema = z.object({
 });
 export type ConfirmInput = z.infer<typeof confirmSchema>;
 
+export const requestResetSchema = z.object({
+  email: z.string().email(),
+});
+export type RequestResetInput = z.infer<typeof requestResetSchema>;
+
+export const resetPasswordSchema = z
+  .object({
+    email: z.string().email(),
+    code: z.string().min(6, "6-digit code"),
+    password: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
 export const createTeamSchema = z.object({
   name: z.string().min(2, "Team name is required"),
   sport: z.string().optional(),
@@ -52,12 +70,33 @@ export const createTeamSchema = z.object({
 });
 export type CreateTeamInput = z.infer<typeof createTeamSchema>;
 
-export const inviteSchema = z.object({
-  email: z.string().email(),
-  name: z.string().min(1, "Name is required"),
-  role: z.enum(["MANAGER", "COACH", "PLAYER", "PHYSIO"]),
-  teamId: z.string().optional(),
-});
+export const inviteSchema = z
+  .object({
+    email: z.string().email(),
+    name: z.string().min(1, "Name is required"),
+    role: z.enum(["MANAGER", "COACH", "PLAYER", "PHYSIO"]),
+    teamId: z.string().optional(),
+    // EMAIL: Cognito emails its own auto-generated temp password (Flow 1).
+    // MANUAL: Owner sets the temp password here and relays it themselves,
+    // no email sent (Flow 2).
+    mode: z.enum(["EMAIL", "MANUAL"]),
+    password: z.string().optional(),
+    confirmPassword: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.mode !== "MANUAL") return;
+    const result = passwordSchema.safeParse(data.password ?? "");
+    if (!result.success) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["password"],
+        message: result.error.issues[0].message,
+      });
+    }
+    if (data.password !== data.confirmPassword) {
+      ctx.addIssue({ code: "custom", path: ["confirmPassword"], message: "Passwords don't match" });
+    }
+  });
 export type InviteInput = z.infer<typeof inviteSchema>;
 
 export const createEventSchema = z.object({

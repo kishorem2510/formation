@@ -47,6 +47,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 Invite
               </Link>
             )}
+            <Link
+              href={`/forgot-password${me?.email ? `?email=${encodeURIComponent(me.email)}` : ""}`}
+              className="hidden text-muted hover:text-foreground sm:inline"
+            >
+              Change password
+            </Link>
             <button
               onClick={toggleTheme}
               aria-label="Toggle theme"

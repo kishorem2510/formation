@@ -48,10 +48,19 @@ export function useCreateTeam(orgId: string | undefined) {
   });
 }
 
+export interface InviteResult {
+  userId: string;
+  email: string;
+  role: string;
+  status: string;
+  /** Only present for Flow 2 (manual credentials) -- returned exactly once. */
+  temporaryPassword?: string;
+}
+
 export function useInviteUser(orgId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: InviteInput) => api.post(`/orgs/${orgId}/invites`, data),
+    mutationFn: (data: InviteInput) => api.post<InviteResult>(`/orgs/${orgId}/invites`, data),
     onSuccess: (_, variables) => {
       if (variables.teamId) {
         queryClient.invalidateQueries({ queryKey: ["teamMembers", variables.teamId] });

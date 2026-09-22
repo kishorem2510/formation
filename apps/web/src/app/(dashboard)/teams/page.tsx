@@ -3,13 +3,16 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/hooks/useAuth";
 import { useMe, isOrgAdmin } from "@/hooks/useMe";
-import { useOrgTeams, useCreateTeam, useInviteUser } from "@/hooks/useTeams";
-import { createTeamSchema, CreateTeamInput, inviteSchema, InviteInput } from "@/lib/schemas";
-import { Button, Card, Field, Input, Select } from "@/components/ui";
+import { useOrgTeams, useCreateTeam } from "@/hooks/useTeams";
+import { createTeamSchema, CreateTeamInput } from "@/lib/schemas";
+import { Button, Card, Field, Input } from "@/components/ui";
+import { InviteForm } from "@/components/InviteForm";
+
+const ORG_INVITE_ROLES = ["MANAGER", "COACH", "PLAYER", "PHYSIO"] as const;
 
 function CreateTeamForm({ orgId }: { orgId: string }) {
   const createTeam = useCreateTeam(orgId);
@@ -37,55 +40,6 @@ function CreateTeamForm({ orgId }: { orgId: string }) {
         </div>
         <Button type="submit" disabled={createTeam.isPending}>
           {createTeam.isPending ? "Creating..." : "Create team"}
-        </Button>
-      </form>
-    </Card>
-  );
-}
-
-function InviteForm({ orgId }: { orgId: string }) {
-  const invite = useInviteUser(orgId);
-  const { register, handleSubmit, control, reset, formState: { errors } } = useForm<InviteInput>({
-    resolver: zodResolver(inviteSchema),
-  });
-  const role = useWatch({ control, name: "role" });
-
-  return (
-    <Card>
-      <h2 className="mb-3 font-medium">Invite someone</h2>
-      <form
-        onSubmit={handleSubmit((data) => invite.mutate(data, { onSuccess: () => reset() }))}
-        className="space-y-3"
-      >
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Name" error={errors.name?.message}>
-            <Input {...register("name")} />
-          </Field>
-          <Field label="Email" error={errors.email?.message}>
-            <Input type="email" {...register("email")} />
-          </Field>
-        </div>
-        <Field label="Role" error={errors.role?.message}>
-          <Select {...register("role")} defaultValue="">
-            <option value="" disabled>
-              Select a role
-            </option>
-            <option value="MANAGER">Manager (org-wide)</option>
-            <option value="COACH">Coach</option>
-            <option value="PLAYER">Player</option>
-            <option value="PHYSIO">Physio</option>
-          </Select>
-        </Field>
-        {role && role !== "MANAGER" && (
-          <Field label="Team ID" error={errors.teamId?.message}>
-            <Input {...register("teamId")} placeholder="Paste the team's id" />
-          </Field>
-        )}
-        {invite.isError && (
-          <p className="text-sm text-danger">{(invite.error as Error).message}</p>
-        )}
-        <Button type="submit" disabled={invite.isPending}>
-          {invite.isPending ? "Sending invite..." : "Send invite"}
         </Button>
       </form>
     </Card>
@@ -127,7 +81,12 @@ function TeamsContent() {
       </div>
 
       <CreateTeamForm orgId={me.orgId} />
-      {showInvite && <InviteForm orgId={me.orgId} />}
+      {showInvite && (
+        <Card>
+          <h2 className="mb-3 font-medium">Invite someone</h2>
+          <InviteForm orgId={me.orgId} allowedRoles={ORG_INVITE_ROLES} />
+        </Card>
+      )}
 
       <div className="space-y-3">
         {teams?.map((team) => (
