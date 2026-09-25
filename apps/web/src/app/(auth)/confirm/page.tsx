@@ -27,7 +27,15 @@ function ConfirmForm() {
     setSubmitError(null);
     configureAmplify();
     try {
-      await confirmSignUp({ username: data.email, confirmationCode: data.code });
+      const orgName = params.get("orgName");
+      await confirmSignUp({
+        username: data.email,
+        confirmationCode: data.code,
+        // Cognito scopes clientMetadata per API call -- this is the call
+        // post_confirmation_trigger.py's event.request.clientMetadata
+        // actually comes from, not signUp's.
+        options: orgName ? { clientMetadata: { orgName } } : undefined,
+      });
       router.push("/login");
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Confirmation failed");

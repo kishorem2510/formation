@@ -32,13 +32,16 @@ export default function SignupPage() {
         password: data.password,
         options: {
           userAttributes: { email: data.email, name: data.name },
-          // Read by post_confirmation_trigger.py to know this is an
-          // org-creation signup (vs. an invited user, who never hits this
-          // page) and to name the new Organization.
-          clientMetadata: { orgName: data.orgName },
         },
       });
-      router.push(`/confirm?email=${encodeURIComponent(data.email)}`);
+      // orgName rides through to /confirm and gets passed to confirmSignUp's
+      // own clientMetadata there -- Cognito scopes clientMetadata per API
+      // call, so passing it here (to signUp) would only ever reach the
+      // Pre-Sign-up trigger, never post_confirmation_trigger.py, which fires
+      // during the separate confirmSignUp call.
+      router.push(
+        `/confirm?email=${encodeURIComponent(data.email)}&orgName=${encodeURIComponent(data.orgName)}`,
+      );
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Sign up failed");
     }
