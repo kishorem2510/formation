@@ -7,6 +7,7 @@ import { useMe } from "@/hooks/useMe";
 import { resolveRole } from "@/hooks/usePermissions";
 import { useAppStore } from "@/store/useAppStore";
 import { canAccessPath } from "@/lib/rbac";
+import { ApiError } from "@/lib/api";
 import { Button } from "@/components/ui";
 
 /**
@@ -31,6 +32,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const meQuery = useMe(status === "authenticated");
   const selectedTeamId = useAppStore((s) => s.selectedTeamId);
   const role = resolveRole(meQuery.data, selectedTeamId);
+  const sessionExpired = meQuery.error instanceof ApiError && meQuery.error.status === 401;
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -38,7 +40,18 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [status, pathname, router]);
 
-  if (status !== "authenticated") {
+  // A 401 on /me means Cognito rejected the token -- expired, revoked (e.g.
+  // after a password change elsewhere), or otherwise invalid. Recover
+  // silently: clear the stale local session and send them back to sign in,
+  // rather than surfacing a scary "couldn't load your account" error for
+  // what is really just "please sign in again."
+  useEffect(() => {
+    if (sessionExpired) {
+      signOut().finally(() => router.replace(`/login?from=${encodeURIComponent(pathname)}`));
+    }
+  }, [sessionExpired, pathname, router, signOut]);
+
+  if (status !== "authenticated" || sessionExpired) {
     return (
       <div className="flex min-h-screen items-center justify-center text-muted">
         Loading...
