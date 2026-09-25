@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { useMe } from "@/hooks/useMe";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useOrg } from "@/hooks/useOrg";
 import { Button, Card } from "@/components/ui";
 
@@ -10,6 +11,7 @@ export default function SettingsPage() {
   const { isAuthenticated } = useAuth();
   const { data: me } = useMe(isAuthenticated);
   const { data: org } = useOrg(me?.orgId);
+  const { role } = usePermissions();
 
   return (
     <div className="space-y-6">
@@ -34,7 +36,7 @@ export default function SettingsPage() {
           </div>
           <div className="flex justify-between">
             <dt className="text-muted">Your role</dt>
-            <dd>{me?.orgRole ?? "—"}</dd>
+            <dd>{role?.name ?? "—"}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-muted">Signed in as</dt>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
-import { useMe, isOrgAdmin, roleOnTeam } from "@/hooks/useMe";
+import { useMe } from "@/hooks/useMe";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useMyTeams } from "@/hooks/useMyTeams";
 import { TeamPicker, useTeamSelection } from "@/components/TeamPicker";
 import { DocumentsSection } from "@/components/team/DocumentsSection";
@@ -12,8 +13,7 @@ export default function DocumentsPage() {
   const { data: me } = useMe(isAuthenticated);
   const { teams, isLoading } = useMyTeams(me);
   const teamId = useTeamSelection(teams);
-  const role = roleOnTeam(me, teamId ?? "");
-  const canUpload = isOrgAdmin(me) || role === "COACH" || role === "PHYSIO";
+  const { can } = usePermissions();
 
   return (
     <div className="space-y-6">
@@ -26,7 +26,7 @@ export default function DocumentsPage() {
 
       {teamId && (
         <Card>
-          <DocumentsSection teamId={teamId} canUpload={canUpload} />
+          <DocumentsSection teamId={teamId} canUpload={can("documents:upload")} />
         </Card>
       )}
     </div>

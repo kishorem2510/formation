@@ -1,7 +1,8 @@
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
-import { useMe, isOrgAdmin, roleOnTeam } from "@/hooks/useMe";
+import { useMe } from "@/hooks/useMe";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useMyTeams } from "@/hooks/useMyTeams";
 import { TeamPicker, useTeamSelection } from "@/components/TeamPicker";
 import { ScheduleSection } from "@/components/team/ScheduleSection";
@@ -12,7 +13,7 @@ export default function SchedulePage() {
   const { data: me } = useMe(isAuthenticated);
   const { teams, isLoading } = useMyTeams(me);
   const teamId = useTeamSelection(teams);
-  const canManage = isOrgAdmin(me) || roleOnTeam(me, teamId ?? "") === "COACH";
+  const { can } = usePermissions();
 
   return (
     <div className="space-y-6">
@@ -25,7 +26,7 @@ export default function SchedulePage() {
 
       {teamId && (
         <Card>
-          <ScheduleSection teamId={teamId} canManage={canManage} />
+          <ScheduleSection teamId={teamId} canManage={can("schedule:manage")} />
         </Card>
       )}
     </div>

@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/hooks/useAuth";
-import { useMe, isOrgAdmin } from "@/hooks/useMe";
+import { useMe } from "@/hooks/useMe";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useOrgTeams, useOrgMembers, useCreateTeam, useRemoveOrgMember } from "@/hooks/useTeams";
 import { createTeamSchema, CreateTeamInput } from "@/lib/schemas";
 import { Button, Card, Field, Input } from "@/components/ui";
@@ -45,7 +46,8 @@ function CreateTeamForm({ orgId }: { orgId: string }) {
 export default function TeamPage() {
   const { isAuthenticated } = useAuth();
   const { data: me } = useMe(isAuthenticated);
-  const admin = isOrgAdmin(me);
+  const { can } = usePermissions();
+  const admin = can("team:manage");
   const { data: teams } = useOrgTeams(admin ? me?.orgId : undefined);
   const { data: members } = useOrgMembers(me?.orgId);
   const removeMember = useRemoveOrgMember(me?.orgId);

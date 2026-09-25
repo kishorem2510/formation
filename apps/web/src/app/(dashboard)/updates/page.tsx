@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/hooks/useAuth";
-import { useMe, isOrgAdmin } from "@/hooks/useMe";
+import { useMe } from "@/hooks/useMe";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useOrgUpdates, usePostUpdate, useDeleteUpdate, useDownloadUpdateAttachment } from "@/hooks/useUpdates";
 import { updateSchema, UpdateInput } from "@/lib/schemas";
 import { Button, Card, Field, Input } from "@/components/ui";
@@ -71,7 +72,8 @@ export default function UpdatesPage() {
   const { data: updates } = useOrgUpdates(me?.orgId);
   const deleteUpdate = useDeleteUpdate(me?.orgId);
   const download = useDownloadUpdateAttachment(me?.orgId);
-  const admin = isOrgAdmin(me);
+  const { can } = usePermissions();
+  const admin = can("updates:post");
   const [showForm, setShowForm] = useState(false);
 
   if (!me) return null;

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useMe, isOrgAdmin, roleOnTeam } from "@/hooks/useMe";
+import { useMe } from "@/hooks/useMe";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useMyTeams } from "@/hooks/useMyTeams";
 import { useTeamEvents } from "@/hooks/useSchedule";
 import { TeamPicker, useTeamSelection } from "@/components/TeamPicker";
@@ -47,7 +48,8 @@ export default function AttendancePage() {
   const { data: me } = useMe(isAuthenticated);
   const { teams, isLoading } = useMyTeams(me);
   const teamId = useTeamSelection(teams);
-  const canMark = isOrgAdmin(me) || roleOnTeam(me, teamId ?? "") === "COACH";
+  const { can } = usePermissions();
+  const canMark = can("attendance:mark");
 
   return (
     <div className="space-y-6">

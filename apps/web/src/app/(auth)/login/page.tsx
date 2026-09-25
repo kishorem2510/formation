@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn, confirmSignIn } from "aws-amplify/auth";
@@ -10,6 +10,7 @@ import { loginSchema, type LoginInput, newPasswordSchema, type NewPasswordInput 
 import { Button, Field, Input } from "@/components/ui";
 import { PasswordInput, PasswordRequirements } from "@/components/PasswordField";
 import { AuthSplitLayout } from "@/components/AuthSplitLayout";
+import { isSafeRedirectPath } from "@/lib/rbac";
 
 const PANEL_PROPS = {
   eyebrow: "Welcome back",
@@ -60,8 +61,16 @@ function NewPasswordStep({ onSubmit }: { onSubmit: (password: string) => Promise
   );
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const params = useSearchParams();
+  // AuthGuard stamps `from` when it bounces an unauthenticated visitor off a
+  // protected route; honouring it here (after the safe-path check) gets them
+  // back where they were headed. Whether their role can actually open it is
+  // verified downstream by AuthGuard itself once /me resolves -- there's no
+  // synchronous role snapshot available this early after signIn() resolves.
+  const from = params.get("from");
+  const landingPath = isSafeRedirectPath(from) ? from : "/dashboard";
   const [submitError, setSubmitError] = useState<string | null>(null);
   // Invited users (Coach/Player/Physio/Manager) are created via
   // AdminCreateUser and must set a permanent password on first sign-in.
@@ -82,13 +91,13 @@ export default function LoginPage() {
         setNeedsNewPassword(true);
         return;
       }
-      router.push("/dashboard");
+      router.push(landingPath);
     } catch (err) {
       // A stale Cognito session was still active in this browser -- the
       // AuthLayout redirect should normally prevent reaching this page at
       // all, but if we still land here mid-race, treat it as success.
       if (err instanceof Error && /already a signed in user/i.test(err.message)) {
-        router.push("/dashboard");
+        router.push(landingPath);
         return;
       }
       setSubmitError(err instanceof Error ? err.message : "Sign in failed");
@@ -97,7 +106,7 @@ export default function LoginPage() {
 
   async function onSetNewPassword(newPassword: string) {
     await confirmSignIn({ challengeResponse: newPassword });
-    router.push("/dashboard");
+    router.push(landingPath);
   }
 
   if (needsNewPassword) {
@@ -131,5 +140,13 @@ export default function LoginPage() {
         </a>
       </p>
     </AuthSplitLayout>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }

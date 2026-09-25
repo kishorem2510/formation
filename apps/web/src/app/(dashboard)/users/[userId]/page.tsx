@@ -5,7 +5,8 @@ import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/hooks/useAuth";
-import { useMe, isOrgAdmin } from "@/hooks/useMe";
+import { useMe } from "@/hooks/useMe";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useUserProfile, useUpdateUserProfile } from "@/hooks/useUserProfile";
 import { profileSchema, ProfileInput } from "@/lib/schemas";
 import { Button, Card, Field, Input } from "@/components/ui";
@@ -25,8 +26,9 @@ export default function UserProfilePage() {
   const { data: me } = useMe(isAuthenticated);
   const { data: profile } = useUserProfile(userId);
   const updateProfile = useUpdateUserProfile(userId);
+  const { can } = usePermissions();
 
-  const canEdit = !!me && (me.userId === userId || isOrgAdmin(me));
+  const canEdit = !!me && (me.userId === userId || can("team:manage"));
 
   const {
     register,

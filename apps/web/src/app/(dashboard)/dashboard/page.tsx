@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
-import { useMe, isOrgAdmin } from "@/hooks/useMe";
+import { useMe } from "@/hooks/useMe";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useOrg } from "@/hooks/useOrg";
 import { useMyTeams } from "@/hooks/useMyTeams";
 import { useOrgMembers } from "@/hooks/useTeams";
@@ -25,7 +26,8 @@ export default function DashboardPage() {
   const { data: me } = useMe(isAuthenticated);
   const { data: org } = useOrg(me?.orgId);
   const { teams } = useMyTeams(me);
-  const admin = isOrgAdmin(me);
+  const { role, can } = usePermissions();
+  const admin = can("team:manage");
   const { data: members } = useOrgMembers(admin ? me?.orgId : undefined);
   const { data: updates } = useOrgUpdates(me?.orgId);
   const latestUpdate = updates?.[0];
@@ -35,7 +37,7 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-2xl font-semibold">Welcome to {org?.name ?? "your organization"}</h1>
         <p className="text-muted">
-          {me?.name} &middot; {me?.orgRole}
+          {me?.name} &middot; {role?.name ?? me?.orgRole}
         </p>
       </div>
 

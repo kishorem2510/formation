@@ -6,21 +6,21 @@ import { usePathname } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { useAppStore } from "@/store/useAppStore";
 import { Me } from "@/hooks/useMe";
+import { usePermissions } from "@/hooks/usePermissions";
+import type { NavItem } from "@/constants/navigation";
 
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/team", label: "Team" },
-  { href: "/schedule", label: "Schedule" },
-  { href: "/attendance", label: "Attendance" },
-  { href: "/documents", label: "Documents" },
-  { href: "/updates", label: "Updates" },
-  { href: "/settings", label: "Settings" },
-];
-
-function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+function NavLinks({
+  items,
+  pathname,
+  onNavigate,
+}: {
+  items: NavItem[];
+  pathname: string;
+  onNavigate?: () => void;
+}) {
   return (
     <nav className="flex flex-1 flex-col gap-1">
-      {NAV_ITEMS.map((item) => {
+      {items.map((item) => {
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
           <Link
@@ -52,6 +52,7 @@ export function Sidebar({
   const [mobileOpen, setMobileOpen] = useState(false);
   const theme = useAppStore((s) => s.theme);
   const toggleTheme = useAppStore((s) => s.toggleTheme);
+  const { role, nav } = usePermissions();
 
   return (
     <>
@@ -91,7 +92,7 @@ export function Sidebar({
                 </svg>
               </button>
             </div>
-            <NavLinks pathname={pathname} onNavigate={() => setMobileOpen(false)} />
+            <NavLinks items={nav} pathname={pathname} onNavigate={() => setMobileOpen(false)} />
             <div className="mt-auto space-y-1 border-t border-border pt-4">
               <button
                 onClick={toggleTheme}
@@ -115,12 +116,12 @@ export function Sidebar({
         <Link href="/dashboard" className="mb-6">
           <Logo />
         </Link>
-        <NavLinks pathname={pathname} />
+        <NavLinks items={nav} pathname={pathname} />
         <div className="mt-auto space-y-3 border-t border-border pt-4">
           {me && (
             <div className="px-3">
               <p className="truncate text-sm font-medium">{me.name}</p>
-              <p className="truncate text-xs text-muted">{me.orgRole}</p>
+              <p className="truncate text-xs text-muted">{role?.name ?? me.orgRole}</p>
             </div>
           )}
           <button
